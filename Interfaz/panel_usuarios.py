@@ -193,18 +193,21 @@ class PanelUsuarios(tk.Frame):
         messagebox.showinfo("Detalles del Usuario", info_usuario)
 
     def eliminar_usuario(self):
-        cedula = self.cedula.get().strip()
+      # Pide el código mediante ventana flotante
+        cedula = simpledialog.askstring("Eliminar Usuario", "Ingrese la cedula del Usuario a eliminar:")
 
-        if not cedula:
-            messagebox.showwarning(
-                "Eliminar",
-                "Ingrese la cédula del usuario"
-            )
+        # Si cancela o lo deja vacío
+        if not cedula or not cedula.strip():
+            if cedula is not None and not cedula.strip():
+                messagebox.showwarning("Eliminar", "Debe ingresar una cedula válida.")
             return
 
+        cedula = cedula.strip()
+
+        # Confirmación de eliminación
         respuesta = messagebox.askyesno(
             "Confirmar",
-            "¿Está seguro de eliminar este usuario?"
+            f"¿Está seguro de eliminar el Usuario con cedula '{cedula}'?"
         )
 
         if not respuesta:
