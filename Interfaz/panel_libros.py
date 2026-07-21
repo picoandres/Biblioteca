@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
-import re
+from tkinter import messagebox, simpledialog
 
 class PanelLibros(tk.Frame):
 
@@ -120,13 +119,6 @@ class PanelLibros(tk.Frame):
     def registrar_libro(self):
         codigo, titulo, autor, categoria, anio = self.obtener_datos_formulario()
 
-        if not re.fullmatch(r"[A-Za-z]\d{1,3}", codigo):
-            messagebox.showerror(
-                "Error",
-                "El código debe tener una letra seguida de 1 a 3 números.\nEjemplos: A1, B25, L999"
-            )
-            return
-
         # Validar que no se registren libros con datos incompletos
         if not codigo or not titulo or not autor or not categoria or not anio:
             messagebox.showerror(
@@ -216,25 +208,23 @@ class PanelLibros(tk.Frame):
 
 
     def buscar_libro(self):
+        # Pide el código mediante una ventana flotante
+        codigo = simpledialog.askstring("Buscar Libro", "Ingrese el código del libro:")
 
-        codigo = self.codigo.get().strip()
-
-        if not codigo:
-            messagebox.showwarning(
-                "Buscar",
-                "Ingrese un código"
-            )
+        # Si el usuario presiona "Cancelar" o deja el campo vacío
+        if not codigo or not codigo.strip():
+            if codigo is not None and not codigo.strip():
+                messagebox.showwarning("Buscar", "Debe ingresar un código válido.")
             return
 
+        codigo = codigo.strip()
         libro = self.biblioteca.buscar_libro(codigo)
 
         if libro is None:
-            messagebox.showerror(
-                "Error",
-                "Libro no encontrado"
-            )
+            messagebox.showerror("Error", "Libro no encontrado")
             return
 
+        # Si se encuentra, limpia los campos y carga la información
         self.limpiar_campos()
 
         self.codigo.insert(0, libro.codigo)
@@ -244,21 +234,33 @@ class PanelLibros(tk.Frame):
         self.anio.insert(0, libro.anio)
         self.bloquear_codigo()
 
+        info_libro = (
+        f"Libro Encontrado\n\n"
+        f"• Código: {libro.codigo}\n"
+        f"• Título: {libro.titulo}\n"
+        f"• Autor: {libro.autor}\n"
+        f"• Categoría: {libro.categoria}\n"
+        f"• Año: {libro.anio}"
+        )
+        messagebox.showinfo("Detalles del Libro", info_libro)
+
 
     def eliminar_libro(self):
+        # Pide el código mediante ventana flotante
+        codigo = simpledialog.askstring("Eliminar Libro", "Ingrese el código del libro a eliminar:")
 
-        codigo = self.codigo.get().strip()
-
-        if not codigo:
-            messagebox.showwarning(
-                "Eliminar",
-                "Ingrese el código del libro"
-            )
+        # Si cancela o lo deja vacío
+        if not codigo or not codigo.strip():
+            if codigo is not None and not codigo.strip():
+                messagebox.showwarning("Eliminar", "Debe ingresar un código válido.")
             return
 
+        codigo = codigo.strip()
+
+        # Confirmación de eliminación
         respuesta = messagebox.askyesno(
             "Confirmar",
-            "¿Está seguro de eliminar este libro?"
+            f"¿Está seguro de eliminar el libro con código '{codigo}'?"
         )
 
         if not respuesta:
@@ -267,50 +269,57 @@ class PanelLibros(tk.Frame):
         exito, mensaje = self.biblioteca.eliminar_libro(codigo)
 
         if exito:
-            messagebox.showinfo(
-                "Correcto",
-                mensaje
-            )
-
+            messagebox.showinfo("Correcto", mensaje)
             self.limpiar_campos()
             self.actualizar_tabla()
-
         else:
-            messagebox.showerror(
-                "Error",
-                mensaje
-            )
+            messagebox.showerror("Error", mensaje)
 
     
     def editar_libro(self):
+        # Si está vacío, saca la ventana flotante para pedirlo.
+        codigo_actual = self.codigo.get().strip()
 
-        codigo, titulo, autor, categoria, anio = self.obtener_datos_formulario()
+        if not codigo_actual:
+            codigo_actual = simpledialog.askstring("Editar Libro", "Ingrese el código del libro que desea editar:")
+            
+            if not codigo_actual or not codigo_actual.strip():
+                if codigo_actual is not None and not codigo_actual.strip():
+                    messagebox.showwarning("Editar Libro", "Debe ingresar un código válido.")
+                return
 
-        # Para editar solo un libro
-        if not codigo:
-            messagebox.showwarning(
-            "Editar libro",
-            "Ingrese el código del libro que desea editar"
-            )
+            codigo_actual = codigo_actual.strip()
+            
+            # Carga los datos del libro en el formulario para que el usuario pueda modificarlos
+            libro = self.biblioteca.buscar_libro(codigo_actual)
+            if libro is None:
+                messagebox.showerror("Error", "Libro no encontrado")
+                return
+            
+            self.limpiar_campos()
+            self.codigo.insert(0, libro.codigo)
+            self.titulo.insert(0, libro.titulo)
+            self.autor.insert(0, libro.autor)
+            self.categoria.insert(0, libro.categoria)
+            self.anio.insert(0, libro.anio)
+            self.bloquear_codigo()
+            
+            messagebox.showinfo("Editar", "Modifique los datos en los campos y presione 'Editar' nuevamente para guardar.")
             return
+
+        # Si el código ya está cargado en la interfaz, lee los nuevos datos modificados
+        codigo, titulo, autor, categoria, anio = self.obtener_datos_formulario()
 
         # Evitar que se deje algún campo sin editar
         if not titulo or not autor or not categoria or not anio:
-            messagebox.showwarning(
-                "Editar libro",
-                "Complete los campos obligatorios"
-            )
+            messagebox.showwarning("Editar libro", "Complete los campos obligatorios")
             return
 
         # Convertir año a entero
         try:
             anio = int(anio)
-
         except ValueError:
-            messagebox.showerror(
-            "Error",
-            "El año debe ser un número entero"
-            )
+            messagebox.showerror("Error", "El año debe ser un número entero")
             return
 
         exito, mensaje = self.biblioteca.editar_libro(
@@ -323,14 +332,8 @@ class PanelLibros(tk.Frame):
 
         # Validar si se editaron correctamente o no los datos del libro
         if exito:
-            messagebox.showinfo(
-                "Correcto",
-                mensaje
-            )
+            messagebox.showinfo("Correcto", mensaje)
             self.actualizar_tabla()
             self.limpiar_campos()
         else:
-            messagebox.showerror(
-                "Error",
-                mensaje
-            )
+            messagebox.showerror("Error", mensaje)
