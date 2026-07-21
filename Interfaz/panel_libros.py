@@ -277,63 +277,83 @@ class PanelLibros(tk.Frame):
 
     
     def editar_libro(self):
-        # Si está vacío, saca la ventana flotante para pedirlo.
-        codigo_actual = self.codigo.get().strip()
 
-        if not codigo_actual:
-            codigo_actual = simpledialog.askstring("Editar Libro", "Ingrese el código del libro que desea editar:")
-            
-            if not codigo_actual or not codigo_actual.strip():
-                if codigo_actual is not None and not codigo_actual.strip():
-                    messagebox.showwarning("Editar Libro", "Debe ingresar un código válido.")
+        codigo = simpledialog.askstring("Editar Libro", "Ingrese el código del libro a editar:")
+
+        if not codigo or not codigo.strip():
+            if codigo is not None and not codigo.strip():
+                messagebox.showwarning("Editar Libro", "Debe ingresar un código válido.")
+            return
+
+        codigo = codigo.strip()
+
+        # 2. Buscar el libro
+        libro = self.biblioteca.buscar_libro(codigo)
+        if libro is None:
+            messagebox.showerror("Error", "Libro no encontrado")
+            return
+
+        # 3. Crear la ventana flotante (Toplevel) para el formulario de edición
+        ventana_edit = tk.Toplevel(self)
+        ventana_edit.title("Editar Libro")
+        ventana_edit.geometry("350x300")
+        ventana_edit.resizable(False, False)
+        ventana_edit.grab_set()  # Bloquea la ventana principal mientras esta está abierta
+
+        # Crear etiquetas y campos de entrada en la ventana flotante
+        tk.Label(ventana_edit, text="Código:").grid(row=0, column=0, padx=10, pady=8, sticky="e")
+        entry_codigo = tk.Entry(ventana_edit)
+        entry_codigo.grid(row=0, column=1, padx=10, pady=8)
+        entry_codigo.insert(0, libro.codigo)
+        entry_codigo.config(state="disabled") # El código no se debe modificar
+
+        tk.Label(ventana_edit, text="Título:").grid(row=1, column=0, padx=10, pady=8, sticky="e")
+        entry_titulo = tk.Entry(ventana_edit)
+        entry_titulo.grid(row=1, column=1, padx=10, pady=8)
+        entry_titulo.insert(0, libro.titulo)
+
+        tk.Label(ventana_edit, text="Autor:").grid(row=2, column=0, padx=10, pady=8, sticky="e")
+        entry_autor = tk.Entry(ventana_edit)
+        entry_autor.grid(row=2, column=1, padx=10, pady=8)
+        entry_autor.insert(0, libro.autor)
+
+        tk.Label(ventana_edit, text="Categoría:").grid(row=3, column=0, padx=10, pady=8, sticky="e")
+        entry_categoria = tk.Entry(ventana_edit)
+        entry_categoria.grid(row=3, column=1, padx=10, pady=8)
+        entry_categoria.insert(0, libro.categoria)
+
+        tk.Label(ventana_edit, text="Año:").grid(row=4, column=0, padx=10, pady=8, sticky="e")
+        entry_anio = tk.Entry(ventana_edit)
+        entry_anio.grid(row=4, column=1, padx=10, pady=8)
+        entry_anio.insert(0, libro.anio)
+
+        # Función interna para guardar los cambios desde la ventana flotante
+        def guardar_cambios():
+            titulo = entry_titulo.get().strip()
+            autor = entry_autor.get().strip()
+            categoria = entry_categoria.get().strip()
+            anio_str = entry_anio.get().strip()
+
+            if not titulo or not autor or not categoria or not anio_str:
+                messagebox.showwarning("Editar Libro", "Complete todos los campos", parent=ventana_edit)
                 return
 
-            codigo_actual = codigo_actual.strip()
-            
-            # Carga los datos del libro en el formulario para que el usuario pueda modificarlos
-            libro = self.biblioteca.buscar_libro(codigo_actual)
-            if libro is None:
-                messagebox.showerror("Error", "Libro no encontrado")
+            try:
+                anio = int(anio_str)
+            except ValueError:
+                messagebox.showerror("Error", "El año debe ser un número entero", parent=ventana_edit)
                 return
-            
-            self.limpiar_campos()
-            self.codigo.insert(0, libro.codigo)
-            self.titulo.insert(0, libro.titulo)
-            self.autor.insert(0, libro.autor)
-            self.categoria.insert(0, libro.categoria)
-            self.anio.insert(0, libro.anio)
-            self.bloquear_codigo()
-            
-            messagebox.showinfo("Editar", "Modifique los datos en los campos y presione 'Editar' nuevamente para guardar.")
-            return
 
-        # Si el código ya está cargado en la interfaz, lee los nuevos datos modificados
-        codigo, titulo, autor, categoria, anio = self.obtener_datos_formulario()
+            exito, mensaje = self.biblioteca.editar_libro(codigo, titulo, autor, categoria, anio)
 
-        # Evitar que se deje algún campo sin editar
-        if not titulo or not autor or not categoria or not anio:
-            messagebox.showwarning("Editar libro", "Complete los campos obligatorios")
-            return
+            if exito:
+                messagebox.showinfo("Correcto", mensaje)
+                self.actualizar_tabla()
+                self.limpiar_campos()
+                ventana_edit.destroy() # Cierra la ventana flotante
+            else:
+                messagebox.showerror("Error", mensaje, parent=ventana_edit)
 
-        # Convertir año a entero
-        try:
-            anio = int(anio)
-        except ValueError:
-            messagebox.showerror("Error", "El año debe ser un número entero")
-            return
-
-        exito, mensaje = self.biblioteca.editar_libro(
-            codigo,
-            titulo,
-            autor,
-            categoria,
-            anio
-        )
-
-        # Validar si se editaron correctamente o no los datos del libro
-        if exito:
-            messagebox.showinfo("Correcto", mensaje)
-            self.actualizar_tabla()
-            self.limpiar_campos()
-        else:
-            messagebox.showerror("Error", mensaje)
+        # Botón Guardar dentro de la ventana flotante
+        btn_guardar = tk.Button(ventana_edit, text="Guardar Cambios", command=guardar_cambios)
+        btn_guardar.grid(row=5, column=0, columnspan=2, pady=15)
