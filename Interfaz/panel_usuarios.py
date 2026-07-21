@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
 
 class PanelUsuarios(tk.Frame):
 
@@ -159,33 +159,38 @@ class PanelUsuarios(tk.Frame):
 
 
     def buscar_usuario(self):
-        cedula = self.cedula.get().strip()
+        cedula = simpledialog.askstring("Buscar Usuario", "Ingrese la cédula del usuario:")
 
-        if not cedula:
-            messagebox.showwarning(
-                "Buscar",
-                "Ingrese la cédula del usuario"
-            )
+        if not cedula or not cedula.strip():
+            if cedula is not None and not cedula.strip():
+                messagebox.showwarning("Buscar", "Debe ingresar una cédula válida.")
             return
 
+        cedula = cedula.strip()
         usuario = self.biblioteca.buscar_usuario(cedula)
 
         if usuario is None:
-            messagebox.showerror(
-                "Error",
-                "Usuario no encontrado"
-            )
+            messagebox.showerror("Error", "Usuario no encontrado")
             return
 
+        # Cargar datos en la interfaz
         self.limpiar_campos()
-
         self.cedula.insert(0, usuario.cedula)
         self.nombre.insert(0, usuario.nombre)
         self.apellido.insert(0, usuario.apellido)
         self.correo.insert(0, usuario.correo)
         self.telefono.insert(0, usuario.telefono)
-
         self.bloquear_cedula()
+
+        # Ventana flotante con los datos del usuario
+        info_usuario = (
+            f" Usuario Encontrado \n\n"
+            f"• Cédula: {usuario.cedula}\n"
+            f"• Nombre: {usuario.nombre} {usuario.apellido}\n"
+            f"• Correo: {usuario.correo}\n"
+            f"• Teléfono: {usuario.telefono}"
+        )
+        messagebox.showinfo("Detalles del Usuario", info_usuario)
 
     def eliminar_usuario(self):
         cedula = self.cedula.get().strip()
@@ -215,14 +220,37 @@ class PanelUsuarios(tk.Frame):
             messagebox.showerror("Error", mensaje)
 
     def editar_usuario(self):
-        cedula, nombre, apellido, correo, telefono = self.obtener_datos_formulario()
+        # Si la cédula no está cargada en el formulario, la pide mediante la ventana flotante
+        cedula_actual = self.cedula.get().strip()
 
-        if not cedula:
-            messagebox.showwarning(
-                "Editar usuario",
-                "Ingrese la cédula del usuario que desea editar"
-            )
-            return
+        if not cedula_actual:
+            cedula_actual = simpledialog.askstring("Editar Usuario", "Ingrese la cédula del usuario a editar:")
+            
+            # Si presiona "Cancelar" o deja la casilla vacía
+            if not cedula_actual or not cedula_actual.strip():
+                if cedula_actual is not None and not cedula_actual.strip():
+                    messagebox.showwarning("Editar Usuario", "Debe ingresar una cédula válida.")
+                return
+
+            cedula_actual = cedula_actual.strip()
+            
+            # Buscar el usuario en la base de datos/sistema
+            usuario = self.biblioteca.buscar_usuario(cedula_actual)
+            if usuario is None:
+                messagebox.showerror("Error", "Usuario no encontrado")
+                return
+            
+            # Limpia los campos y carga la información encontrada
+            self.limpiar_campos()
+            self.cedula.insert(0, usuario.cedula)
+            self.nombre.insert(0, usuario.nombre)
+            self.apellido.insert(0, usuario.apellido)
+            self.correo.insert(0, usuario.correo)
+            self.telefono.insert(0, usuario.telefono)
+            self.bloquear_cedula()
+
+        # Si la cédula ya está cargada en la interfaz, lee los datos modificados del formulario
+        cedula, nombre, apellido, correo, telefono = self.obtener_datos_formulario()
 
         if not nombre:
             messagebox.showwarning(
@@ -231,6 +259,7 @@ class PanelUsuarios(tk.Frame):
             )
             return
 
+        # Guardar los cambios actualizados
         exito, mensaje = self.biblioteca.editar_usuario(
             cedula,
             nombre,
@@ -245,8 +274,7 @@ class PanelUsuarios(tk.Frame):
             self.limpiar_campos()
         else:
             messagebox.showerror("Error", mensaje)
-
-    
+        
 
 
     
