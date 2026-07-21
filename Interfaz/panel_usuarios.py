@@ -220,61 +220,78 @@ class PanelUsuarios(tk.Frame):
             messagebox.showerror("Error", mensaje)
 
     def editar_usuario(self):
-        # Si la cédula no está cargada en el formulario, la pide mediante la ventana flotante
-        cedula_actual = self.cedula.get().strip()
+        cedula = simpledialog.askstring("Editar Usuario", "Ingrese la cédula del usuario a editar:")
 
-        if not cedula_actual:
-            cedula_actual = simpledialog.askstring("Editar Usuario", "Ingrese la cédula del usuario a editar:")
-            
-            # Si presiona "Cancelar" o deja la casilla vacía
-            if not cedula_actual or not cedula_actual.strip():
-                if cedula_actual is not None and not cedula_actual.strip():
-                    messagebox.showwarning("Editar Usuario", "Debe ingresar una cédula válida.")
-                return
-
-            cedula_actual = cedula_actual.strip()
-            
-            # Buscar el usuario en la base de datos/sistema
-            usuario = self.biblioteca.buscar_usuario(cedula_actual)
-            if usuario is None:
-                messagebox.showerror("Error", "Usuario no encontrado")
-                return
-            
-            # Limpia los campos y carga la información encontrada
-            self.limpiar_campos()
-            self.cedula.insert(0, usuario.cedula)
-            self.nombre.insert(0, usuario.nombre)
-            self.apellido.insert(0, usuario.apellido)
-            self.correo.insert(0, usuario.correo)
-            self.telefono.insert(0, usuario.telefono)
-            self.bloquear_cedula()
-
-        # Si la cédula ya está cargada en la interfaz, lee los datos modificados del formulario
-        cedula, nombre, apellido, correo, telefono = self.obtener_datos_formulario()
-
-        if not nombre:
-            messagebox.showwarning(
-                "Editar usuario",
-                "El nombre es obligatorio"
-            )
+        if not cedula or not cedula.strip():
+            if cedula is not None and not cedula.strip():
+                messagebox.showwarning("Editar Usuario", "Debe ingresar una cédula válida.")
             return
 
-        # Guardar los cambios actualizados
-        exito, mensaje = self.biblioteca.editar_usuario(
-            cedula,
-            nombre,
-            apellido,
-            correo,
-            telefono
-        )
+        cedula = cedula.strip()
 
-        if exito:
-            messagebox.showinfo("Correcto", mensaje)
-            self.actualizar_tabla()
-            self.limpiar_campos()
-        else:
-            messagebox.showerror("Error", mensaje)
-        
+        # 2. Buscar al usuario
+        usuario = self.biblioteca.buscar_usuario(cedula)
+        if usuario is None:
+            messagebox.showerror("Error", "Usuario no encontrado")
+            return
+
+        # 3. Crear la ventana flotante (Toplevel)
+        ventana_edit = tk.Toplevel(self)
+        ventana_edit.title("Editar Usuario")
+        ventana_edit.geometry("350x300")
+        ventana_edit.resizable(False, False)
+        ventana_edit.grab_set()
+
+        # Campos
+        tk.Label(ventana_edit, text="Cédula:").grid(row=0, column=0, padx=10, pady=8, sticky="e")
+        entry_cedula = tk.Entry(ventana_edit)
+        entry_cedula.grid(row=0, column=1, padx=10, pady=8)
+        entry_cedula.insert(0, usuario.cedula)
+        entry_cedula.config(state="disabled")
+
+        tk.Label(ventana_edit, text="Nombre:").grid(row=1, column=0, padx=10, pady=8, sticky="e")
+        entry_nombre = tk.Entry(ventana_edit)
+        entry_nombre.grid(row=1, column=1, padx=10, pady=8)
+        entry_nombre.insert(0, usuario.nombre)
+
+        tk.Label(ventana_edit, text="Apellido:").grid(row=2, column=0, padx=10, pady=8, sticky="e")
+        entry_apellido = tk.Entry(ventana_edit)
+        entry_apellido.grid(row=2, column=1, padx=10, pady=8)
+        entry_apellido.insert(0, usuario.apellido)
+
+        tk.Label(ventana_edit, text="Correo:").grid(row=3, column=0, padx=10, pady=8, sticky="e")
+        entry_correo = tk.Entry(ventana_edit)
+        entry_correo.grid(row=3, column=1, padx=10, pady=8)
+        entry_correo.insert(0, usuario.correo)
+
+        tk.Label(ventana_edit, text="Teléfono:").grid(row=4, column=0, padx=10, pady=8, sticky="e")
+        entry_telefono = tk.Entry(ventana_edit)
+        entry_telefono.grid(row=4, column=1, padx=10, pady=8)
+        entry_telefono.insert(0, usuario.telefono)
+
+        def guardar_cambios():
+            nombre = entry_nombre.get().strip()
+            apellido = entry_apellido.get().strip()
+            correo = entry_correo.get().strip()
+            telefono = entry_telefono.get().strip()
+
+            if not nombre:
+                messagebox.showwarning("Editar Usuario", "El nombre es obligatorio", parent=ventana_edit)
+                return
+
+            exito, mensaje = self.biblioteca.editar_usuario(cedula, nombre, apellido, correo, telefono)
+
+            if exito:
+                messagebox.showinfo("Correcto", mensaje)
+                self.actualizar_tabla()
+                self.limpiar_campos()
+                ventana_edit.destroy()
+            else:
+                messagebox.showerror("Error", mensaje, parent=ventana_edit)
+
+        btn_guardar = tk.Button(ventana_edit, text="Guardar Cambios", command=guardar_cambios)
+        btn_guardar.grid(row=5, column=0, columnspan=2, pady=15)
+            
 
 
     
